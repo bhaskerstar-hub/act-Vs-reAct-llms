@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.*
+
+# Editor / tool internals
+.claude/
+CLAUDE.md
+.github/
+.cursor/
+.vscode/
+*.swp
+.DS_Store

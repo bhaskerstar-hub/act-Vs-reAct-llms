@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReAct vs Non-ReAct — Support Ticket POC</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+      color: #fff;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-icon {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,.15);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+    header h1   { font-size: 1.25rem; font-weight: 700; }
+    header p    { font-size: 0.82rem; opacity: .7; margin-top: 2px; }
+    .header-tag {
+      margin-left: auto;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      letter-spacing: .04em;
+      flex-shrink: 0;
+    }
+
+    main { max-width: 1200px; margin: 28px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 22px; }
+
+    /* ── Cards ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+      padding: 22px 24px;
+    }
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #64748b;
+      margin-bottom: 14px;
+    }
+
+    /* ── Input row ── */
+    .input-row {
+      display: grid;
+      grid-template-columns: 220px 1fr auto;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+    .field label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 5px;
+    }
+    .field select, .field textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      font-size: 0.9rem;
+      color: #1e293b;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .field select:focus, .field textarea:focus { border-color: #2563eb; background: #fff; }
+    .field textarea { min-height: 70px; resize: vertical; }
+
+    .compare-btn {
+      padding: 10px 24px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s;
+      height: fit-content;
+    }
+    .compare-btn:hover    { background: #1d4ed8; }
+    .compare-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    /* ── Quick-fill pills ── */
+    .pills-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .pills-label { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; }
+    .pill {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all .12s;
+      border: 1px solid;
+      font-weight: 500;
+    }
+    .pill-diff  { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+    .pill-diff:hover  { background: #ffedd5; }
+    .pill-same  { background: #f0f9ff; border-color: #bae6fd; color: #0369a1; }
+    .pill-same:hover  { background: #e0f2fe; }
+    .pill-tag {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .tag-diff { background: #fed7aa; color: #92400e; }
+    .tag-same { background: #bae6fd; color: #075985; }
+
+    /* ── Comparison grid ── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 48px 1fr;
+      gap: 0;
+      align-items: start;
+    }
+    .vs-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-top: 80px;
+      gap: 8px;
+    }
+    .vs-badge {
+      width: 36px; height: 36px;
+      background: #e2e8f0;
+      color: #64748b;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+    .vs-line { width: 1px; flex: 1; background: #e2e8f0; min-height: 40px; }
+
+    /* ── Approach panels ── */
+    .approach-panel {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid transparent;
+    }
+    .approach-panel.non-react { border-color: #e2e8f0; }
+    .approach-panel.react     { border-color: #bfdbfe; }
+
+    .approach-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .non-react .approach-header { background: #f8fafc; }
+    .react     .approach-header { background: #eff6ff; }
+
+    .approach-icon {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .non-react .approach-icon { background: #e2e8f0; }
+    .react     .approach-icon { background: #dbeafe; }
+
+    .approach-name { font-size: 0.95rem; font-weight: 700; color: #0f172a; }
+    .approach-desc { font-size: 0.75rem; color: #64748b; margin-top: 1px; }
+
+    .approach-body { padding: 16px 20px; background: #fff; }
+
+    /* ── Steps ── */
+    .steps-list { margin-bottom: 16px; }
+    .step-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      position: relative;
+    }
+    .step-row + .step-row::before {
+      content: '';
+      position: absolute;
+      left: 13px; top: -4px;
+      width: 2px; height: 12px;
+      background: #e2e8f0;
+    }
+    .step-dot {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .non-react .step-dot { background: #e2e8f0; color: #475569; }
+    .react     .step-dot { background: #dbeafe; color: #1d4ed8; }
+
+    .step-content { flex: 1; }
+    .step-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: monospace;
+      color: #334155;
+    }
+    .step-desc { font-size: 0.75rem; color: #94a3b8; margin-top: 1px; }
+
+    .step-expand-btn {
+      background: none;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      color: #94a3b8;
+      cursor: pointer;
+      margin-top: 2px;
+    }
+    .step-expand-btn:hover { border-color: #cbd5e1; color: #64748b; }
+
+    .step-detail {
+      display: none;
+      margin-top: 6px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .step-detail.open { display: block; }
+    .step-detail pre {
+      font-size: 0.73rem;
+      white-space: pre-wrap;
+      color: #334155;
+      line-height: 1.5;
+    }
+    .detail-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #94a3b8;
+      margin-bottom: 3px;
+      margin-top: 8px;
+    }
+    .detail-label:first-child { margin-top: 0; }
+
+    /* ── Result section ── */
+    .result-section { border-top: 1px solid #f1f5f9; padding-top: 14px; }
+    .result-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .badge-low      { background: #f1f5f9; color: #475569; }
+    .badge-medium   { background: #fef3c7; color: #92400e; }
+    .badge-high     { background: #ffedd5; color: #9a3412; }
+    .badge-critical { background: #fee2e2; color: #991b1b; }
+    .badge-auto     { background: #dcfce7; color: #166534; }
+    .badge-escalated{ background: #fee2e2; color: #991b1b; }
+
+    .result-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; margin-bottom: 5px; }
+    .result-response {
+      font-size: 0.85rem;
+      line-height: 1.55;
+      padding: 10px 12px;
+      border-radius: 7px;
+      margin-bottom: 12px;
+    }
+    .non-react .result-response { background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; }
+    .react     .result-response { background: #f0f9ff; border: 1px solid #bae6fd; color: #0c4a6e; }
+    .react     .result-response.escalated { background: #fff7ed; border-color: #fed7aa; color: #7c2d12; }
+
+    .context-row { display: flex; flex-wrap: wrap; gap: 5px; }
+    .ctx-chip {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+    .ctx-checked { background: #dcfce7; color: #166534; }
+    .ctx-skipped { background: #fee2e2; color: #991b1b; text-decoration: line-through; opacity: .7; }
+
+    /* ── Placeholder state ── */
+    .placeholder-state {
+      padding: 32px 20px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.88rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .placeholder-state svg { opacity: .3; }
+
+    /* ── Verdict banner ── */
+    .verdict {
+      border-radius: 12px;
+      padding: 18px 22px;
+      display: none;
+    }
+    .verdict.agree  { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .verdict.differ { background: #fff7ed; border: 1px solid #fed7aa; }
+
+    .verdict-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .verdict-icon {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .agree  .verdict-icon { background: #dcfce7; }
+    .differ .verdict-icon { background: #ffedd5; }
+    .verdict-title { font-size: 0.95rem; font-weight: 700; }
+    .agree  .verdict-title { color: #14532d; }
+    .differ .verdict-title { color: #7c2d12; }
+    .verdict-detail { font-size: 0.85rem; line-height: 1.55; }
+    .agree  .verdict-detail { color: #166534; }
+    .differ .verdict-detail { color: #9a3412; }
+
+    /* ── History ── */
+    .history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .history-header h2 { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+    .refresh-btn {
+      padding: 4px 12px;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      font-size: 0.78rem;
+      color: #475569;
+      cursor: pointer;
+    }
+    .refresh-btn:hover { background: #e2e8f0; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th { padding: 8px 12px; background: #f8fafc; color: #64748b; font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #e2e8f0; text-align: left; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    .ticket-id { font-family: monospace; font-size: 0.78rem; color: #2563eb; }
+    .msg-cell { max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .empty-row td { text-align: center; color: #94a3b8; padding: 24px; }
+
+    .spinner {
+      display: inline-block; width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+      border-radius: 50%; animation: spin .6s linear infinite;
+      margin-right: 6px; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 800px) {
+      .compare-grid { grid-template-columns: 1fr; }
+      .vs-col { flex-direction: row; padding: 8px 0; }
+      .vs-line { width: 40px; height: 1px; }
+      .input-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-icon">🎫</div>
+  <div>
+    <h1>Customer Support Ticket Router</h1>
+    <p>Proof of Concept — ReAct Agent vs Non-ReAct Pipeline</p>
+  </div>
+  <div class="header-tag">Side-by-side comparison</div>
+</header>
+
+<main>
+
+  <!-- ── Input card ── -->
+  <div class="card">
+    <div class="card-title">Submit a customer message</div>
+    <div class="input-row">
+      <div class="field">
+        <label>Customer</label>
+        <select id="customer_id">
+          <option value="CUST001">CUST001 — Alice Johnson (Premium)</option>
+          <option value="CUST002">CUST002 — Bob Martinez (Basic · Overdue billing)</option>
+          <option value="CUST003">CUST003 — Carol White (Enterprise)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Message</label>
+        <textarea id="message" placeholder="Type a customer message or pick a scenario below…"></textarea>
+      </div>
+      <button class="compare-btn" id="compare-btn" onclick="runCompare()">
+        Compare Approaches ▶
+      </button>
+    </div>
+
+    <div class="pills-row">
+      <span class="pills-label">Try a scenario:</span>
+
+      <span class="pill pill-diff"
+        data-customer="CUST002"
+        data-msg="I was charged twice this month on my subscription">
+        Double charge
+        <span class="pill-tag tag-diff">DIFFER</span>
+      </span>
+
+      <span class="pill pill-diff"
+        data-customer="CUST001"
+        data-msg="I want to cancel my account and get a refund">
+        Cancel account
+        <span class="pill-tag tag-diff">DIFFER</span>
+      </span>
+
+      <span class="pill pill-same"
+        data-customer="CUST003"
+        data-msg="Complete outage — our entire team cannot access the platform, this is urgent!">
+        System outage
+        <span class="pill-tag tag-same">AGREE</span>
+      </span>
+
+      <span class="pill pill-same"
+        data-customer="CUST001"
+        data-msg="How do I set up the API integration?">
+        API setup question
+        <span class="pill-tag tag-same">AGREE</span>
+      </span>
+
+      <span class="pill pill-same"
+        data-customer="CUST001"
+        data-msg="My password reset email is not arriving">
+        Password reset
+        <span class="pill-tag tag-same">AGREE</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- ── Comparison grid ── -->
+  <div class="compare-grid">
+
+    <!-- Non-ReAct panel -->
+    <div class="approach-panel non-react" id="panel-nr">
+      <div class="approach-header">
+        <div class="approach-icon">⚙️</div>
+        <div>
+          <div class="approach-name">Non-ReAct Pipeline</div>
+          <div class="approach-desc">Fixed 3-step sequence — no reasoning loop</div>
+        </div>
+      </div>
+      <div class="approach-body">
+        <div id="nr-body">
+          <div class="placeholder-state">
+            <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M4 6h16M4 12h16M4 18h7"/>
+            </svg>
+            Submit a message to see the fixed pipeline result
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VS divider -->
+    <div class="vs-col">
+      <div class="vs-line"></div>
+      <div class="vs-badge">VS</div>
+      <div class="vs-line"></div>
+    </div>
+
+    <!-- ReAct panel -->
+    <div class="approach-panel react" id="panel-ra">
+      <div class="approach-header">
+        <div class="approach-icon">🧠</div>
+        <div>
+          <div class="approach-name">ReAct Agent</div>
+          <div class="approach-desc">Dynamic reasoning loop — adapts based on observations</div>
+        </div>
+      </div>
+      <div class="approach-body">
+        <div id="ra-body">
+          <div class="placeholder-state">
+            <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+            Submit a message to see the ReAct agent reasoning trace
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Verdict banner ── -->
+  <div class="verdict" id="verdict-banner">
+    <div class="verdict-header">
+      <div class="verdict-icon" id="verdict-icon"></div>
+      <div class="verdict-title" id="verdict-title"></div>
+    </div>
+    <div class="verdict-detail" id="verdict-detail"></div>
+  </div>
+
+  <!-- ── History ── -->
+  <div class="card">
+    <div class="history-header">
+      <h2>Ticket History</h2>
+      <button class="refresh-btn" onclick="loadHistory()">↻ Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticket ID</th><th>Customer</th><th>Urgency</th>
+            <th>Status</th><th>Assigned To</th><th>Message</th>
+          </tr>
+        </thead>
+        <tbody id="history-body">
+          <tr class="empty-row"><td colspan="6">No tickets yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ── Quick-fill pills ──────────────────────────────────────────────
+  document.querySelectorAll(".pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      document.getElementById("customer_id").value = pill.dataset.customer;
+      document.getElementById("message").value     = pill.dataset.msg;
+    });
+  });
+
+  // ── Compare ───────────────────────────────────────────────────────
+  async function runCompare() {
+    const message = document.getElementById("message").value.trim();
+    if (!message) { document.getElementById("message").focus(); return; }
+
+    const btn = document.getElementById("compare-btn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Running both…';
+
+    const payload = {
+      customer_id: document.getElementById("customer_id").value,
+      message,
+      channel: "web",
+    };
+
+    try {
+      const res = await fetch("/api/v1/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = await res.json();
+      renderNonReact(data.non_react);
+      renderReAct(data.react);
+      renderVerdict(data);
+      loadHistory();
+    } catch (err) {
+      alert("Error: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "Compare Approaches ▶";
+    }
+  }
+
+  // ── Non-ReAct renderer ────────────────────────────────────────────
+  function renderNonReact(nr) {
+    const stepsHtml = nr.steps.map(s => stepRow(s.step, s.name, s.description, s.input, s.output, "non-react")).join("");
+
+    const isEsc = nr.routed_to_human;
+    const statusBadge = isEsc ? "badge-escalated" : "badge-auto";
+    const statusLabel = isEsc ? "Escalated" : "Auto Resolved";
+
+    const checkedHtml = nr.context_checked.map(c => `<span class="ctx-chip ctx-checked">${c}</span>`).join("");
+    const skippedHtml = nr.context_skipped.map(c => `<span class="ctx-chip ctx-skipped">${c}</span>`).join("");
+
+    document.getElementById("nr-body").innerHTML = `
+      <div class="steps-list">${stepsHtml}</div>
+      <div class="result-section">
+        <div class="result-row">
+          <span class="badge badge-${nr.urgency}">${nr.urgency} urgency</span>
+          <span class="badge ${statusBadge}">${statusLabel}</span>
+          <span class="badge" style="background:#f1f5f9;color:#475569">${nr.steps.length} steps</span>
+        </div>
+        <div class="result-label">Suggested Response</div>
+        <div class="result-response">${esc(nr.suggested_response)}</div>
+        <div class="result-label">Context checked</div>
+        <div class="context-row" style="margin-bottom:6px">${checkedHtml}</div>
+        <div class="result-label">Context never checked</div>
+        <div class="context-row">${skippedHtml}</div>
+      </div>
+    `;
+    wireExpandBtns("nr-body");
+  }
+
+  // ── ReAct renderer ────────────────────────────────────────────────
+  function renderReAct(ra) {
+    const stepsHtml = ra.trace.map(t => stepRow(
+      t.step, t.action || "final", t.thought,
+      t.action_input, t.observation, "react"
+    )).join("");
+
+    const isEsc = ra.routed_to_human;
+    const statusBadge = isEsc ? "badge-escalated" : "badge-auto";
+    const statusLabel = isEsc ? "Escalated" : "Auto Resolved";
+
+    const checkedHtml = ra.context_checked.map(c => `<span class="ctx-chip ctx-checked">${c}</span>`).join("");
+
+    document.getElementById("ra-body").innerHTML = `
+      <div class="steps-list">${stepsHtml}</div>
+      <div class="result-section">
+        <div class="result-row">
+          <span class="badge badge-${ra.urgency}">${ra.urgency} urgency</span>
+          <span class="badge ${statusBadge}">${statusLabel}</span>
+          <span class="badge" style="background:#dbeafe;color:#1d4ed8">${ra.trace.length} steps</span>
+        </div>
+        <div class="result-label">Suggested Response</div>
+        <div class="result-response ${isEsc ? 'escalated' : ''}">${esc(ra.suggested_response)}</div>
+        <div class="result-label">Context gathered by agent</div>
+        <div class="context-row">${checkedHtml}</div>
+      </div>
+    `;
+    wireExpandBtns("ra-body");
+  }
+
+  // ── Step row template ─────────────────────────────────────────────
+  function stepRow(num, name, desc, input, output, side) {
+    const id = `step-${side}-${num}`;
+    const hasDetail = input || output;
+    return `
+      <div class="step-row">
+        <div class="step-dot">${num}</div>
+        <div class="step-content">
+          <div class="step-name">${esc(name)}</div>
+          <div class="step-desc">${esc(desc || "")}</div>
+          ${hasDetail ? `<button class="step-expand-btn" data-target="${id}">▼ details</button>` : ""}
+          <div class="step-detail" id="${id}">
+            ${input  ? `<div class="detail-label">Input</div><pre>${JSON.stringify(input, null, 2)}</pre>` : ""}
+            ${output ? `<div class="detail-label">Output</div><pre>${JSON.stringify(output, null, 2)}</pre>` : ""}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function wireExpandBtns(containerId) {
+    document.getElementById(containerId).querySelectorAll(".step-expand-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const detail = document.getElementById(btn.dataset.target);
+        const open = detail.classList.toggle("open");
+        btn.textContent = open ? "▲ details" : "▼ details";
+      });
+    });
+  }
+
+  // ── Verdict ───────────────────────────────────────────────────────
+  function renderVerdict(data) {
+    const banner = document.getElementById("verdict-banner");
+    const icon   = document.getElementById("verdict-icon");
+    const title  = document.getElementById("verdict-title");
+    const detail = document.getElementById("verdict-detail");
+
+    if (data.verdict === "differ") {
+      banner.className = "verdict differ";
+      icon.textContent  = "⚠️";
+      title.textContent = "Outcomes differ — Non-ReAct got it wrong";
+    } else {
+      banner.className = "verdict agree";
+      icon.textContent  = "✅";
+      title.textContent = "Both approaches reached the same routing decision";
+    }
+
+    detail.textContent = data.verdict_detail;
+    banner.style.display = "block";
+  }
+
+  // ── History ───────────────────────────────────────────────────────
+  async function loadHistory() {
+    try {
+      const res  = await fetch("/api/v1/tickets");
+      const data = await res.json();
+      const rows = data.tickets;
+      const tbody = document.getElementById("history-body");
+
+      if (!rows.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No tickets yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.slice().reverse().map(t => {
+        const sc = t.status === "auto_resolved" ? "badge-auto" : "badge-escalated";
+        const sl = t.status === "auto_resolved" ? "Auto Resolved" : "Escalated";
+        return `<tr>
+          <td><span class="ticket-id">${t.id}</span></td>
+          <td>${t.customer_id}</td>
+          <td><span class="badge badge-${t.urgency}">${t.urgency}</span></td>
+          <td><span class="badge ${sc}">${sl}</span></td>
+          <td>${t.assigned_to}</td>
+          <td class="msg-cell" title="${esc(t.message)}">${esc(t.message)}</td>
+        </tr>`;
+      }).join("");
+    } catch (_) {}
+  }
+
+  function esc(s) {
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  loadHistory();
+</script>
+
+</body>
+</html>
