@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from gateway import get_gateway
 from routers.tickets import router as ticket_router
+
+get_gateway()  # initialise singleton at startup so stats accumulate from request #1
 
 app = FastAPI(
     title="Customer Support Ticket Router",

@@ -65,7 +65,7 @@
     /* ── Input row ── */
     .input-row {
       display: grid;
-      grid-template-columns: 220px 1fr auto;
+      grid-template-columns: 200px 160px 1fr auto;
       gap: 12px;
       align-items: end;
       margin-bottom: 14px;
@@ -381,6 +381,50 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Engine badges ── */
+    .engine-badge { display: flex; align-items: center; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+    .engine-chip {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .engine-meta { font-size: 0.7rem; color: #94a3b8; }
+    .routing-tip {
+      font-size: 0.7rem;
+      color: #2563eb;
+      cursor: help;
+      text-decoration: underline dotted;
+    }
+
+    /* ── Gateway bar ── */
+    .gateway-bar {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      font-size: 0.8rem;
+      color: #64748b;
+      display: none;
+      line-height: 1.6;
+    }
+    .gateway-bar b { color: #334155; }
+    .gw-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .gw-sep { color: #cbd5e1; }
+    .gw-provider {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .gw-fast     { background: #f0fdf4; color: #166534; }
+    .gw-standard { background: #eff6ff; color: #1d4ed8; }
+    .gw-advanced { background: #fdf4ff; color: #7e22ce; }
+    .gw-cost { font-size: 0.7rem; color: #94a3b8; }
+    .gw-reason { font-size: 0.72rem; color: #64748b; font-style: italic; }
+
     @media (max-width: 800px) {
       .compare-grid { grid-template-columns: 1fr; }
       .vs-col { flex-direction: row; padding: 8px 0; }
@@ -415,6 +459,14 @@
         </select>
       </div>
       <div class="field">
+        <label>Routing Policy</label>
+        <select id="policy">
+          <option value="auto">Auto (smart routing)</option>
+          <option value="cost">Cost-optimized</option>
+          <option value="accuracy">Accuracy-first</option>
+        </select>
+      </div>
+      <div class="field">
         <label>Message</label>
         <textarea id="message" placeholder="Type a customer message or pick a scenario below…"></textarea>
       </div>
@@ -425,6 +477,13 @@
 
     <div class="pills-row">
       <span class="pills-label">Try a scenario:</span>
+
+      <span class="pill pill-diff"
+        data-customer="CUST003"
+        data-msg="the dashboard is showing a 500 error">
+        Enterprise 500 error
+        <span class="pill-tag tag-diff">DIFFER</span>
+      </span>
 
       <span class="pill pill-diff"
         data-customer="CUST002"
@@ -473,6 +532,7 @@
         <div>
           <div class="approach-name">Non-ReAct Pipeline</div>
           <div class="approach-desc">Fixed 3-step sequence — no reasoning loop</div>
+          <div class="engine-badge" id="nr-engine-badge"></div>
         </div>
       </div>
       <div class="approach-body">
@@ -502,6 +562,7 @@
         <div>
           <div class="approach-name">ReAct Agent</div>
           <div class="approach-desc">Dynamic reasoning loop — adapts based on observations</div>
+          <div class="engine-badge" id="ra-engine-badge"></div>
         </div>
       </div>
       <div class="approach-body">
@@ -527,6 +588,9 @@
     </div>
     <div class="verdict-detail" id="verdict-detail"></div>
   </div>
+
+  <!-- ── Gateway summary bar ── -->
+  <div class="gateway-bar" id="gateway-bar"></div>
 
   <!-- ── History ── -->
   <div class="card">
@@ -574,9 +638,10 @@
       message,
       channel: "web",
     };
+    const policy = document.getElementById("policy").value;
 
     try {
-      const res = await fetch("/api/v1/compare", {
+      const res = await fetch(`/api/v1/compare?policy=${policy}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -586,6 +651,7 @@
       renderNonReact(data.non_react);
       renderReAct(data.react);
       renderVerdict(data);
+      renderGatewayMeta(data.gateway);
       loadHistory();
     } catch (err) {
       alert("Error: " + err.message);
@@ -703,6 +769,53 @@
 
     detail.textContent = data.verdict_detail;
     banner.style.display = "block";
+  }
+
+  // ── Gateway metadata ──────────────────────────────────────────────
+  function renderGatewayMeta(gw) {
+    if (!gw) return;
+
+    const tierClass = { "fast-engine": "gw-fast", "standard-engine": "gw-standard", "advanced-engine": "gw-advanced" };
+
+    function engineBadge(m) {
+      if (!m) return "";
+      const tc = tierClass[m.provider_name] || "gw-standard";
+      return `<span class="gw-provider ${tc}">${m.display_name}</span>
+              <span class="gw-cost">${m.latency_ms}ms · $${m.cost.toFixed(4)}</span>`;
+    }
+
+    // Inject badges into panel headers
+    const nrBadge = document.getElementById("nr-engine-badge");
+    const raBadge = document.getElementById("ra-engine-badge");
+    if (nrBadge && gw.non_react_provider) {
+      const m = gw.non_react_provider;
+      const tc = tierClass[m.provider_name] || "gw-standard";
+      nrBadge.innerHTML = `<span class="engine-chip">${m.display_name}</span>
+        <span class="engine-meta">${m.latency_ms}ms · $${m.cost.toFixed(4)}</span>`;
+    }
+    if (raBadge && gw.react_provider) {
+      const m = gw.react_provider;
+      raBadge.innerHTML = `<span class="engine-chip">${m.display_name}</span>
+        <span class="engine-meta">${m.latency_ms}ms · $${m.cost.toFixed(4)}</span>
+        <span class="routing-tip" title="${esc(m.routing_reason)}">ℹ why this engine?</span>`;
+    }
+
+    // Gateway summary bar
+    const bar = document.getElementById("gateway-bar");
+    const nr  = gw.non_react_provider;
+    const ra  = gw.react_provider;
+    bar.innerHTML = `
+      <div class="gw-row">
+        <b>Gateway</b>
+        <span class="gw-sep">·</span>
+        Policy: <b>${gw.policy}</b>
+        <span class="gw-sep">|</span>
+        Non-ReAct: ${engineBadge(nr)}
+        <span class="gw-sep">|</span>
+        ReAct: ${engineBadge(ra)}
+        ${ra ? `<span class="gw-sep">|</span><span class="gw-reason">${esc(ra.routing_reason)}</span>` : ""}
+      </div>`;
+    bar.style.display = "block";
   }
 
   // ── History ───────────────────────────────────────────────────────

@@ -31,6 +31,29 @@ class ReActTraceStep(BaseModel):
     observation: Optional[Any] = None
 
 
+class GatewayMetadata(BaseModel):
+    provider_name:  str
+    display_name:   str
+    routing_reason: str
+    policy:         str
+    latency_ms:     float
+    cost:           float
+    success:        bool
+
+
+class ProviderStatsSchema(BaseModel):
+    call_count:    int
+    total_latency: float
+    avg_latency:   float
+    total_cost:    float
+    avg_cost:      float
+    error_count:   int
+
+
+class GatewayStatsResponse(BaseModel):
+    stats: dict[str, ProviderStatsSchema]
+
+
 class TicketResponse(BaseModel):
     ticket_id: str
     customer_id: str
@@ -41,3 +64,4 @@ class TicketResponse(BaseModel):
     assigned_to: str
     reasoning_trace: List[ReActTraceStep]
     created_at: datetime
+    gateway_metadata: Optional[GatewayMetadata] = None
