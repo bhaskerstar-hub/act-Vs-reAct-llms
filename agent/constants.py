@@ -1,0 +1,5 @@
+CRITICAL_TERMS = ["outage", "data loss", "breach", "security incident", "all users affected"]
+HIGH_TERMS     = ["urgent", "asap", "immediately", "critical", "system down", "emergency", "deleted"]
+MEDIUM_TERMS   = ["broken", "error", "not working", "bug", "failed", "wrong charge"]
+BILLING_TERMS  = ["invoice", "charge", "bill", "payment", "refund", "subscription", "charged", "price"]
+CANCEL_TERMS   = ["cancel", "cancellation", "unsubscribe", "close account", "quit", "downgrade"]

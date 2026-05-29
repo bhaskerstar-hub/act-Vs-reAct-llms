@@ -1,5 +1,6 @@
 from data.store import get_customer, search_kb
 from typing import Any
+from agent.constants import CRITICAL_TERMS, HIGH_TERMS, MEDIUM_TERMS
 
 
 class Tool:
@@ -14,9 +15,9 @@ class CheckUrgencyTool(Tool):
     name = "check_urgency"
     description = "Analyzes the message and returns an urgency level: low, medium, high, or critical"
 
-    _critical_terms = ["outage", "data loss", "breach", "security incident", "all users affected"]
-    _high_terms = ["urgent", "asap", "immediately", "critical", "system down", "emergency", "deleted"]
-    _medium_terms = ["broken", "error", "not working", "bug", "failed", "wrong charge"]
+    _critical_terms = CRITICAL_TERMS
+    _high_terms     = HIGH_TERMS
+    _medium_terms   = MEDIUM_TERMS
 
     def run(self, inputs: dict) -> dict:
         message = inputs.get("message", "").lower()

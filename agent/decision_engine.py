@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
+from agent.constants import BILLING_TERMS, CANCEL_TERMS, CRITICAL_TERMS, HIGH_TERMS
 
 
 @dataclass
@@ -17,9 +18,9 @@ class DecisionEngine:
     In a production system this would be replaced with a real model API call.
     """
 
-    _billing_terms = ["invoice", "charge", "bill", "payment", "refund", "subscription", "charged", "price"]
-    _cancel_terms  = ["cancel", "cancellation", "unsubscribe", "close account", "quit", "downgrade"]
-    _urgent_terms  = ["urgent", "asap", "immediately", "critical", "outage", "emergency", "data loss", "breach"]
+    _billing_terms = BILLING_TERMS
+    _cancel_terms  = CANCEL_TERMS
+    _urgent_terms  = CRITICAL_TERMS + HIGH_TERMS
 
     def decide_next_step(self, context: dict) -> ReActStep:
         message     = context.get("message", "").lower()

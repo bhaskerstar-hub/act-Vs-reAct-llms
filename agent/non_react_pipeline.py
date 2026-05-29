@@ -1,4 +1,5 @@
 from data.store import search_kb
+from agent.constants import CRITICAL_TERMS, HIGH_TERMS, MEDIUM_TERMS
 
 
 class NonReActPipeline:
@@ -8,9 +9,9 @@ class NonReActPipeline:
     what each step finds. No reasoning loop, no adaptive branching.
     """
 
-    _critical_terms = ["outage", "data loss", "breach", "security incident", "all users affected"]
-    _high_terms = ["urgent", "asap", "immediately", "critical", "system down", "emergency", "deleted"]
-    _medium_terms = ["broken", "error", "not working", "bug", "failed", "wrong charge"]
+    _critical_terms = CRITICAL_TERMS
+    _high_terms     = HIGH_TERMS
+    _medium_terms   = MEDIUM_TERMS
 
     def run(self, customer_id: str, message: str) -> dict:
         steps = []

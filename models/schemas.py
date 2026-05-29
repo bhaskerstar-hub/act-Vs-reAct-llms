@@ -39,6 +39,7 @@ class GatewayMetadata(BaseModel):
     latency_ms:     float
     cost:           float
     success:        bool
+    engine_type:    str = "rule-based"
 
 
 class ProviderStatsSchema(BaseModel):

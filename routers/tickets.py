@@ -11,7 +11,7 @@ from models.schemas import (
     GatewayStatsResponse,
 )
 from gateway import get_gateway, RoutingPolicy
-from data.store import save_ticket, get_all_tickets, get_ticket
+from data.store import save_ticket, get_all_tickets, get_ticket, get_customer, list_customers
 
 router  = APIRouter(tags=["tickets"])
 gateway = get_gateway()
@@ -19,6 +19,8 @@ gateway = get_gateway()
 
 @router.post("/tickets", response_model=TicketResponse)
 def submit_ticket(request: TicketRequest, policy: str = "auto"):
+    if not get_customer(request.customer_id):
+        raise HTTPException(status_code=422, detail=f"Unknown customer_id '{request.customer_id}'. Use GET /api/v1/customers to see valid IDs.")
     routing_policy = RoutingPolicy(policy) if policy in ("auto", "cost", "accuracy") else RoutingPolicy.AUTO
     result = gateway.execute(
         customer_id=request.customer_id,
@@ -85,6 +87,8 @@ def submit_ticket(request: TicketRequest, policy: str = "auto"):
 
 @router.post("/compare")
 def compare_approaches(request: TicketRequest, policy: str = "auto"):
+    if not get_customer(request.customer_id):
+        raise HTTPException(status_code=422, detail=f"Unknown customer_id '{request.customer_id}'. Use GET /api/v1/customers to see valid IDs.")
     routing_policy = RoutingPolicy(policy) if policy in ("auto", "cost", "accuracy") else RoutingPolicy.AUTO
 
     # Non-ReAct side: always the fast engine (fixed pipeline, no reasoning loop)
@@ -180,6 +184,11 @@ def compare_approaches(request: TicketRequest, policy: str = "auto"):
 @router.get("/gateway/stats", response_model=GatewayStatsResponse)
 def get_gateway_stats():
     return GatewayStatsResponse(stats=gateway.get_stats())
+
+
+@router.get("/customers")
+def list_customers_endpoint():
+    return {"customers": list_customers()}
 
 
 @router.get("/tickets")

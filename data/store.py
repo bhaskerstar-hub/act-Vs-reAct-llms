@@ -1,5 +1,7 @@
-from typing import Optional
+import json
 import uuid
+from pathlib import Path
+from typing import Optional
 
 CUSTOMERS = {
     "CUST001": {
@@ -35,6 +37,54 @@ CUSTOMERS = {
         "open_tickets": 0,
         "past_tickets": [
             {"id": "T-200", "issue": "API rate limit", "resolved": True, "date": "2024-03-01"},
+        ],
+    },
+    "CUST004": {
+        "id": "CUST004",
+        "name": "David Kim",
+        "email": "david@example.com",
+        "plan": "premium",
+        "account_age_days": 180,
+        "billing_status": "current",
+        "open_tickets": 1,
+        "past_tickets": [
+            {"id": "T-310", "issue": "wrong charge on invoice", "resolved": False, "date": "2024-05-10"},
+            {"id": "T-295", "issue": "payment failed", "resolved": True, "date": "2024-04-22"},
+        ],
+    },
+    "CUST005": {
+        "id": "CUST005",
+        "name": "Eva Rossi",
+        "email": "eva@example.com",
+        "plan": "basic",
+        "account_age_days": 12,
+        "billing_status": "current",
+        "open_tickets": 0,
+        "past_tickets": [],
+    },
+    "CUST006": {
+        "id": "CUST006",
+        "name": "Frank Nguyen",
+        "email": "frank@example.com",
+        "plan": "enterprise",
+        "account_age_days": 1095,
+        "billing_status": "overdue",
+        "open_tickets": 2,
+        "past_tickets": [
+            {"id": "T-401", "issue": "system outage affecting all users", "resolved": True, "date": "2024-02-14"},
+            {"id": "T-388", "issue": "data export failed", "resolved": True, "date": "2024-01-30"},
+        ],
+    },
+    "CUST007": {
+        "id": "CUST007",
+        "name": "Grace Lee",
+        "email": "grace@example.com",
+        "plan": "premium",
+        "account_age_days": 540,
+        "billing_status": "current",
+        "open_tickets": 0,
+        "past_tickets": [
+            {"id": "T-502", "issue": "cancel subscription request", "resolved": True, "date": "2024-03-20"},
         ],
     },
 }
@@ -92,11 +142,34 @@ KNOWLEDGE_BASE = [
     },
 ]
 
-_tickets: dict = {}
+_TICKETS_FILE = Path(__file__).parent / "tickets.json"
+
+
+def _load_tickets() -> dict:
+    if _TICKETS_FILE.exists():
+        try:
+            return json.loads(_TICKETS_FILE.read_text())
+        except (json.JSONDecodeError, OSError):
+            return {}
+    return {}
+
+
+def _persist_tickets(tickets: dict) -> None:
+    try:
+        _TICKETS_FILE.write_text(json.dumps(tickets, indent=2, default=str))
+    except OSError:
+        pass
+
+
+_tickets: dict = _load_tickets()
 
 
 def get_customer(customer_id: str) -> Optional[dict]:
     return CUSTOMERS.get(customer_id)
+
+
+def list_customers() -> list[dict]:
+    return [{"id": c["id"], "name": c["name"], "plan": c["plan"]} for c in CUSTOMERS.values()]
 
 
 def search_kb(query: str) -> list:
@@ -113,6 +186,7 @@ def save_ticket(ticket: dict) -> str:
     ticket_id = f"TKT-{str(uuid.uuid4())[:8].upper()}"
     ticket["id"] = ticket_id
     _tickets[ticket_id] = ticket
+    _persist_tickets(_tickets)
     return ticket_id
 
 

@@ -76,6 +76,7 @@ class LLMGateway:
                 "latency_ms":     round(elapsed_ms, 1),
                 "cost":           provider.cost_per_call,
                 "success":        True,
+                "engine_type":    provider.engine_type,
             }
             return result
         except Exception:

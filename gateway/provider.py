@@ -5,6 +5,7 @@ from agent.react_agent import ReActAgent
 from agent.non_react_pipeline import NonReActPipeline
 from agent.decision_engine import DecisionEngine, ReActStep
 from agent.tools import get_all_tools
+from agent.constants import BILLING_TERMS
 
 
 class BaseProvider(ABC):
@@ -12,6 +13,7 @@ class BaseProvider(ABC):
     display_name: str
     latency_ms: int
     cost_per_call: float
+    engine_type: str
 
     @abstractmethod
     def execute(self, customer_id: str, message: str) -> dict:
@@ -26,6 +28,7 @@ class FastProvider(BaseProvider):
     display_name = "Fast Engine"
     latency_ms   = 50
     cost_per_call = 0.001
+    engine_type  = "rule-based"
 
     def __init__(self):
         self._pipeline = NonReActPipeline()
@@ -56,6 +59,7 @@ class StandardProvider(BaseProvider):
     display_name = "Standard Engine"
     latency_ms   = 200
     cost_per_call = 0.005
+    engine_type  = "rule-based"
 
     def __init__(self):
         self._agent = ReActAgent()
@@ -149,6 +153,7 @@ class AdvancedProvider(BaseProvider):
     display_name = "Advanced Engine"
     latency_ms   = 800
     cost_per_call = 0.020
+    engine_type  = "rule-based"
 
     def __init__(self):
         self._agent = ReActAgent()

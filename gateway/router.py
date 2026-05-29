@@ -1,5 +1,6 @@
 from enum import Enum
 from data.store import get_customer
+from agent.constants import CRITICAL_TERMS, HIGH_TERMS, MEDIUM_TERMS, BILLING_TERMS, CANCEL_TERMS
 
 
 class RoutingPolicy(str, Enum):
@@ -14,11 +15,11 @@ class Router:
     Returns (provider_name, routing_reason).
     """
 
-    _critical_terms = ["outage", "data loss", "breach", "security incident", "all users affected"]
-    _high_terms     = ["urgent", "asap", "immediately", "critical", "system down", "emergency", "deleted"]
-    _medium_terms   = ["broken", "error", "not working", "bug", "failed", "wrong charge"]
-    _billing_terms  = ["invoice", "charge", "bill", "payment", "refund", "subscription", "charged", "price"]
-    _cancel_terms   = ["cancel", "cancellation", "unsubscribe", "close account", "quit", "downgrade"]
+    _critical_terms = CRITICAL_TERMS
+    _high_terms     = HIGH_TERMS
+    _medium_terms   = MEDIUM_TERMS
+    _billing_terms  = BILLING_TERMS
+    _cancel_terms   = CANCEL_TERMS
 
     def select(
         self,
